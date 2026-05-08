@@ -114,6 +114,13 @@ const DashboardPage = ({ user, onLoginClick, onOpenNotifications }) => {
         },
       });
 
+      // Handle conflict - already following
+      if (res.status === 409) {
+        console.log('Already following this category');
+        setSavingCategoryId(null);
+        return;
+      }
+
       if (!res.ok) {
         throw new Error('Unable to update follow status');
       }

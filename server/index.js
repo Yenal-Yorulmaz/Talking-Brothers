@@ -273,36 +273,24 @@ app.post('/api/experiences', authenticateToken, async (req, res) => {
 
     // Insert experience into database
     const insertSql = `
-      INSERT INTO experiences (user_id, category_id, title, content, location, rating, product_id, experience_image) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+      INSERT INTO experiences (user_id, category_id, title, content, location, purchase_date, rating, product_id, experience_image) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     
-    const [result] = await db.promise().query(insertSql, [user_id, resolvedCategoryId, title, content, location, rating, product_id || null, experience_image || null]);
+    const [result] = await db.promise().query(insertSql, [user_id, resolvedCategoryId, title, content, location, purchase_date || null, rating, product_id || null, experience_image || null]);
     const experienceId = result.insertId;
 
-    // Send notifications to category followers
-    const categoryFollowersSql = `
+    // Send notifications to followers
+    const followersSql = `
       SELECT user_id FROM category_follows 
       WHERE category_id = ? AND user_id != ?`;
     
-    const [categoryFollowers] = await db.promise().query(categoryFollowersSql, [resolvedCategoryId, user_id]);
+    const [followers] = await db.promise().query(followersSql, [resolvedCategoryId, user_id]);
     
-    // Send notifications to user followers
-    const userFollowersSql = `
-      SELECT follower_id as user_id FROM user_follows 
-      WHERE following_id = ?`;
-    
-    const [userFollowers] = await db.promise().query(userFollowersSql, [user_id]);
-    
-    // Combine both sets of followers (avoiding duplicates)
-    const allFollowers = new Set();
-    categoryFollowers.forEach(f => allFollowers.add(f.user_id));
-    userFollowers.forEach(f => allFollowers.add(f.user_id));
-
-    // Add notifications for each follower
-    if (allFollowers.size > 0) {
-      const notificationValues = Array.from(allFollowers).map(followerId => [followerId, 'new_experience', experienceId, user_id]);
+    // Add notification for each follower
+    if (followers.length > 0) {
+      const notificationValues = followers.map(follower => [follower.user_id, 'new_experience', experienceId]);
       const notificationSql = `
-        INSERT INTO notifications (user_id, type, reference_id, author_id) 
+        INSERT INTO notifications (user_id, type, reference_id) 
         VALUES ?`;
       
       await db.promise().query(notificationSql, [notificationValues]);
@@ -322,22 +310,21 @@ app.post('/api/experiences', authenticateToken, async (req, res) => {
 });
 
 // 3. Get User Unread Notification Count
-// SECURITY FIX: Changed to use authenticated user's ID instead of URL parameter
-app.get('/api/notifications/unread', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id; // Use JWT token instead of URL parameter
-    
-    const sql = `
-      SELECT COUNT(*) as unread_count 
-      FROM notifications 
-      WHERE user_id = ? AND is_read = 0`;
-    
-    const [result] = await db.promise().query(sql, [userId]);
-    res.json({ unread_count: result[0]?.unread_count || 0 });
-  } catch (err) {
-    console.error("Notification count query error:", err);
-    res.status(500).json({ error: err.message });
-  }
+app.get('/api/notifications/unread/:userId', (req, res) => {
+  const userId = req.params.userId;
+  
+  const sql = `
+    SELECT COUNT(*) as unread_count 
+    FROM notifications 
+    WHERE user_id = ? AND is_read = 0`;
+  
+  db.query(sql, [userId], (err, result) => {
+    if (err) {
+      console.error("Notification count query error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ unread_count: result[0].unread_count });
+  });
 });
 
 // 4. Categorize Get
@@ -396,8 +383,19 @@ app.post('/api/categories/:id/follow', authenticateToken, async (req, res) => {
     const categoryId = req.params.id;
     const userId = req.user.id;
 
+    // Check if already following
+    const [existing] = await db.promise().query(
+      'SELECT id FROM category_follows WHERE user_id = ? AND category_id = ?',
+      [userId, categoryId]
+    );
+
+    if (existing.length > 0) {
+      return res.status(409).json({ error: 'Already following this category' });
+    }
+
+    // Insert the follow
     await db.promise().query(
-      'INSERT IGNORE INTO category_follows (user_id, category_id) VALUES (?, ?)',
+      'INSERT INTO category_follows (user_id, category_id) VALUES (?, ?)',
       [userId, categoryId]
     );
 
@@ -439,9 +437,7 @@ app.get('/api/notifications', authenticateToken, async (req, res) => {
         n.created_at,
         COALESCE(ce.id, cp.id) AS category_id,
         COALESCE(ce.name, cp.name) AS category_name,
-        COALESCE(e.title, p.product_name) AS entry_title,
-        u.username AS author_name,
-        u.avatar_url AS author_avatar
+        COALESCE(e.title, p.product_name) AS entry_title
       FROM notifications n
       LEFT JOIN experiences e
         ON n.type = 'new_experience' AND e.id = n.reference_id
@@ -451,8 +447,6 @@ app.get('/api/notifications', authenticateToken, async (req, res) => {
         ON n.type = 'new_product' AND p.id = n.reference_id
       LEFT JOIN categories cp
         ON cp.id = p.category_id
-      LEFT JOIN users u
-        ON u.id = n.author_id
       WHERE n.user_id = ?
       ORDER BY n.created_at DESC
       LIMIT 50`;
@@ -480,7 +474,7 @@ app.post('/api/notifications/read-all', authenticateToken, async (req, res) => {
   }
 });
 
-// 4.6. Dashboard feed: latest entries in followed categories and from followed users
+// 4.6. Dashboard feed: latest entries in followed categories
 app.get('/api/dashboard/followed-updates', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -493,8 +487,7 @@ app.get('/api/dashboard/followed-updates', authenticateToken, async (req, res) =
           e.created_at,
           c.id AS category_id,
           c.name AS category_name,
-          u.username AS author_name,
-          0 AS from_user_follow
+          u.username AS author_name
         FROM experiences e
         JOIN categories c ON c.id = e.category_id
         JOIN users u ON u.id = e.user_id
@@ -510,52 +503,17 @@ app.get('/api/dashboard/followed-updates', authenticateToken, async (req, res) =
           p.created_at,
           c.id AS category_id,
           c.name AS category_name,
-          u.username AS author_name,
-          0 AS from_user_follow
+          u.username AS author_name
         FROM products p
         JOIN categories c ON c.id = p.category_id
         JOIN users u ON u.id = p.user_id
         JOIN category_follows cf ON cf.category_id = p.category_id
         WHERE cf.user_id = ?
-
-        UNION ALL
-
-        SELECT
-          'experience' AS entry_type,
-          e.id AS entry_id,
-          e.title AS entry_title,
-          e.created_at,
-          c.id AS category_id,
-          c.name AS category_name,
-          u.username AS author_name,
-          1 AS from_user_follow
-        FROM experiences e
-        JOIN categories c ON c.id = e.category_id
-        JOIN users u ON u.id = e.user_id
-        JOIN user_follows uf ON uf.following_id = e.user_id
-        WHERE uf.follower_id = ?
-
-        UNION ALL
-
-        SELECT
-          'product' AS entry_type,
-          p.id AS entry_id,
-          p.product_name AS entry_title,
-          p.created_at,
-          c.id AS category_id,
-          c.name AS category_name,
-          u.username AS author_name,
-          1 AS from_user_follow
-        FROM products p
-        JOIN categories c ON c.id = p.category_id
-        JOIN users u ON u.id = p.user_id
-        JOIN user_follows uf ON uf.following_id = p.user_id
-        WHERE uf.follower_id = ?
       ) AS combined
       ORDER BY created_at DESC
       LIMIT 50`;
 
-    const [rows] = await db.promise().query(sql, [userId, userId, userId, userId]);
+    const [rows] = await db.promise().query(sql, [userId, userId]);
     res.json(rows);
   } catch (error) {
     console.error('Dashboard followed updates error:', error);
@@ -577,12 +535,7 @@ app.get('/api/products', (req, res) => {
       console.error("Product query error:", err);
       return res.status(500).json({ error: err.message });
     }
-    // Calculate usage duration for each product
-    const productsWithDuration = result.map(product => ({
-      ...product,
-      usage_duration: calculateUsageDuration(product.purchase_date)
-    }));
-    res.json(productsWithDuration);
+    res.json(result);
   });
 });
 
@@ -623,14 +576,8 @@ app.get('/api/products/:id', (req, res) => {
         return res.status(500).json({ error: err.message });
       }
 
-      // Add usage duration to product
-      const productWithDuration = {
-        ...productResult[0],
-        usage_duration: calculateUsageDuration(productResult[0].purchase_date)
-      };
-
       res.json({
-        product: productWithDuration,
+        product: productResult[0],
         experiences: experiencesResult
       });
     });
@@ -678,16 +625,14 @@ app.post('/api/products', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Purchase date is required' });
     }
 
-    // CHECK FOR DUPLICATE PRODUCTS
-    const [duplicateCheck] = await db.promise().query(
-      'SELECT id FROM products WHERE user_id = ? AND (product_code = ? OR product_name = ?)',
-      [user_id, product_code, product_name]
+    // Check for duplicate product code for this user
+    const [existingProduct] = await db.promise().query(
+      'SELECT id FROM products WHERE user_id = ? AND product_code = ?',
+      [user_id, product_code]
     );
 
-    if (duplicateCheck.length > 0) {
-      return res.status(409).json({ 
-        error: 'A product with this code or name already exists. Products must have unique names and codes.' 
-      });
+    if (existingProduct.length > 0) {
+      return res.status(409).json({ error: 'You already have a product with this product code' });
     }
 
     if (!resolvedCategoryId && category_name) {
@@ -711,37 +656,26 @@ app.post('/api/products', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Missing category information' });
     }
 
+    // Calculate usage duration from purchase date
+    const usage_duration = calculateUsageDuration(purchase_date);
+
     const insertSql = `
-      INSERT INTO products (user_id, category_id, product_name, product_code, purchase_date, pros, cons, content, rating, product_image) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      INSERT INTO products (user_id, category_id, product_name, product_code, purchase_date, usage_duration, pros, cons, content, rating, product_image) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     
-    const [result] = await db.promise().query(insertSql, [user_id, resolvedCategoryId, product_name, product_code, purchase_date, pros, cons, content, rating || 5, product_image || null]);
+    const [result] = await db.promise().query(insertSql, [user_id, resolvedCategoryId, product_name, product_code, purchase_date, usage_duration, pros, cons, content, rating || 5, product_image || null]);
     const productId = result.insertId;
 
-    // Send notifications to category followers
-    const categoryFollowersSql = `
+    const followersSql = `
       SELECT user_id FROM category_follows 
       WHERE category_id = ? AND user_id != ?`;
     
-    const [categoryFollowers] = await db.promise().query(categoryFollowersSql, [resolvedCategoryId, user_id]);
+    const [followers] = await db.promise().query(followersSql, [resolvedCategoryId, user_id]);
     
-    // Send notifications to user followers
-    const userFollowersSql = `
-      SELECT follower_id as user_id FROM user_follows 
-      WHERE following_id = ?`;
-    
-    const [userFollowers] = await db.promise().query(userFollowersSql, [user_id]);
-    
-    // Combine both sets of followers (avoiding duplicates)
-    const allFollowers = new Set();
-    categoryFollowers.forEach(f => allFollowers.add(f.user_id));
-    userFollowers.forEach(f => allFollowers.add(f.user_id));
-
-    // Add notifications for each follower
-    if (allFollowers.size > 0) {
-      const notificationValues = Array.from(allFollowers).map(followerId => [followerId, 'new_product', productId, user_id]);
+    if (followers.length > 0) {
+      const notificationValues = followers.map(follower => [follower.user_id, 'new_product', productId]);
       const notificationSql = `
-        INSERT INTO notifications (user_id, type, reference_id, author_id) 
+        INSERT INTO notifications (user_id, type, reference_id) 
         VALUES ?`;
       
       await db.promise().query(notificationSql, [notificationValues]);
@@ -986,156 +920,6 @@ app.get('/api/search', (req, res) => {
 // Health check route
 app.get('/', (req, res) => {
   res.send("Xplora API Server Running 🚀");
-});
-
-// DEBUG: Get all users (for testing only)
-app.get('/api/debug/users', async (req, res) => {
-  try {
-    const [users] = await db.promise().query('SELECT id, username, email FROM users LIMIT 50');
-    res.json({ count: users.length, users });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// --- USER FOLLOWING ROUTES ---
-
-// 5.1. Search users
-// 5.1. Search users
-app.get('/api/users/search', authenticateToken, async (req, res) => {
-  try {
-    const searchTerm = req.query.q || '';
-    const userId = req.user.id;
-
-    if (searchTerm.trim().length < 1) {
-      return res.json([]);
-    }
-
-    // First, try to search with user_follows info
-    let sql = `
-      SELECT 
-        u.id,
-        u.username,
-        u.avatar_url,
-        CASE 
-          WHEN uf.id IS NOT NULL THEN 1 
-          ELSE 0 
-        END AS is_followed
-      FROM users u
-      LEFT JOIN user_follows uf ON uf.follower_id = ? AND uf.following_id = u.id
-      WHERE u.id != ? AND u.username LIKE ?
-      ORDER BY u.username ASC
-      LIMIT 20`;
-
-    try {
-      const [results] = await db.promise().query(sql, [userId, userId, `%${searchTerm}%`]);
-      const formattedResults = results.map(r => ({
-        ...r,
-        is_followed: Boolean(r.is_followed)
-      }));
-      return res.json(formattedResults);
-    } catch (joinError) {
-      // Fallback if user_follows table doesn't exist - just search users without follow status
-      console.warn('User_follows table might not exist, using fallback search:', joinError.message);
-      const fallbackSql = `
-        SELECT 
-          u.id,
-          u.username,
-          u.avatar_url,
-          0 AS is_followed
-        FROM users u
-        WHERE u.id != ? AND u.username LIKE ?
-        ORDER BY u.username ASC
-        LIMIT 20`;
-      
-      const [fallbackResults] = await db.promise().query(fallbackSql, [userId, `%${searchTerm}%`]);
-      return res.json(fallbackResults);
-    }
-  } catch (error) {
-    console.error('User search error:', error);
-    res.status(500).json({ error: 'Unable to search users' });
-  }
-});
-
-// 5.2. Get followed users for a user
-app.get('/api/users/followed', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const sql = `
-      SELECT 
-        u.id,
-        u.username,
-        u.avatar_url
-      FROM user_follows uf
-      JOIN users u ON u.id = uf.following_id
-      WHERE uf.follower_id = ?
-      ORDER BY u.username ASC`;
-
-    const [followedUsers] = await db.promise().query(sql, [userId]);
-    res.json(followedUsers);
-  } catch (error) {
-    console.error('Followed users fetch error:', error);
-    res.status(500).json({ error: 'Unable to load followed users' });
-  }
-});
-
-// 5.3. Check follow status
-app.get('/api/users/:id/follow-status', authenticateToken, async (req, res) => {
-  try {
-    const followingId = req.params.id;
-    const followerId = req.user.id;
-
-    const [rows] = await db.promise().query(
-      'SELECT id FROM user_follows WHERE follower_id = ? AND following_id = ?',
-      [followerId, followingId]
-    );
-
-    res.json({ followed: rows.length > 0 });
-  } catch (error) {
-    console.error('Follow status error:', error);
-    res.status(500).json({ error: 'Unable to check follow status' });
-  }
-});
-
-// 5.4. Follow a user
-app.post('/api/users/:id/follow', authenticateToken, async (req, res) => {
-  try {
-    const followingId = req.params.id;
-    const followerId = req.user.id;
-
-    // Prevent self-following
-    if (parseInt(followingId) === followerId) {
-      return res.status(400).json({ error: 'Cannot follow yourself' });
-    }
-
-    await db.promise().query(
-      'INSERT IGNORE INTO user_follows (follower_id, following_id) VALUES (?, ?)',
-      [followerId, followingId]
-    );
-
-    res.status(200).json({ message: 'User followed' });
-  } catch (error) {
-    console.error('Follow user error:', error);
-    res.status(500).json({ error: 'Unable to follow user' });
-  }
-});
-
-// 5.5. Unfollow a user
-app.delete('/api/users/:id/follow', authenticateToken, async (req, res) => {
-  try {
-    const followingId = req.params.id;
-    const followerId = req.user.id;
-
-    await db.promise().query(
-      'DELETE FROM user_follows WHERE follower_id = ? AND following_id = ?',
-      [followerId, followingId]
-    );
-
-    res.status(200).json({ message: 'User unfollowed' });
-  } catch (error) {
-    console.error('Unfollow user error:', error);
-    res.status(500).json({ error: 'Unable to unfollow user' });
-  }
 });
 
 // --- PROFILE PICTURE UPLOAD ---

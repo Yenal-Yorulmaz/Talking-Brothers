@@ -82,6 +82,12 @@ const NewProduct = ({ onClose, onSuccess }) => {
         onClose();
       } else {
         const errorBody = await response.json().catch(() => null);
+        
+        // Handle duplicate product code (409 Conflict)
+        if (response.status === 409) {
+          throw new Error(errorBody?.error || 'You already have a product with this product code');
+        }
+        
         throw new Error(errorBody?.error || 'Could not create product.');
       }
     } catch (error) {
