@@ -54,7 +54,7 @@ const Header = ({ activePage, setActivePage, onAddExperience, onAddProduct, onAv
             <div className="relative">
               <button
                 onClick={onNotificationClick}
-                className="w-11 h-11 rounded-full border-2 border-blue-200 hover:border-blue-500 transition-all bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center hover:shadow-lg shadow-md"
+                className="relative w-11 h-11 rounded-full border-2 border-blue-200 hover:border-blue-500 transition-all bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center hover:shadow-lg shadow-md"
                 aria-label="Notifications"
               >
                 <svg className="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -157,7 +157,7 @@ const ExperienceDetails = ({ experience, onClose }) => {
 const ExperienceCard = ({ experience, onViewDetails }) => (
   <div className="bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-8 rounded-3xl shadow-lg hover:shadow-2xl transition-all border-2 border-blue-200 group cursor-pointer transform hover:scale-105 hover:-translate-y-2" onClick={onViewDetails}>
     <div className="aspect-16/10 rounded-2xl overflow-hidden mb-6 relative shadow-md">
-      <img src={`https://source.unsplash.com/random/600x400?${experience.category_name}`} alt={experience.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+      <img src={experience.experience_image || `https://source.unsplash.com/random/600x400?${experience.category_name}`} alt={experience.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
       <div className="absolute top-4 left-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-full text-xs font-black shadow-lg">
         ⭐ EXPERIENCE
       </div>
@@ -186,7 +186,7 @@ const ExperiencesPage = ({ refreshTrigger }) => {
   const [categories, setCategories] = useState([]);
   const [selectedExperienceId, setSelectedExperienceId] = useState(null);
 
-  const experienceCategories = ['City', 'Cinema', 'Theatre', 'Workshop'];
+  const experienceCategories = ['City', 'Cinema', 'Theatre', 'Workshop', 'Cafe', 'Restaurant'];
 
   const fetchExperiences = () => {
     fetch('http://localhost:5000/api/experiences')

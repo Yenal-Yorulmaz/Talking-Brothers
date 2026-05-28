@@ -116,7 +116,8 @@ const NewExperience = ({ onClose, onSuccess, productName = '', initialCategoryNa
     location: '',
     content: '',
     rating: 5,
-    experience_image: null
+    experience_image: null,
+    purchase_date: ''
   });
   const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -207,8 +208,8 @@ const NewExperience = ({ onClose, onSuccess, productName = '', initialCategoryNa
       <div className="bg-gradient-to-br from-white via-blue-50 to-slate-100 rounded-3xl p-10 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto shadow-2xl border border-blue-200">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-3xl font-black text-slate-900">⭐ Share an Experience</h2>
-            <p className="text-sm text-slate-600 font-medium mt-1">Tell us about your amazing experience</p>
+            <h2 className="text-3xl font-black text-slate-900">{productName ? '📝 Add Your Review' : '⭐ Share an Experience'}</h2>
+            <p className="text-sm text-slate-600 font-medium mt-1">{productName ? 'Tell us what you think about this product' : 'Tell us about your amazing experience'}</p>
           </div>
           <button
             onClick={onClose}
@@ -221,9 +222,9 @@ const NewExperience = ({ onClose, onSuccess, productName = '', initialCategoryNa
         <form onSubmit={handleSubmit} className="space-y-6">
           {productName && (
             <div className="bg-gradient-to-r from-orange-50 to-orange-100 border-2 border-orange-200 rounded-2xl p-5 mb-6">
-              <p className="text-xs uppercase font-bold text-orange-700 mb-2">📦 Product Context</p>
+              <p className="text-xs uppercase font-bold text-orange-700 mb-2">📦 Product</p>
               <p className="text-base font-bold text-orange-900">{productName}</p>
-              <p className="text-xs text-orange-700 mt-2">Your experience will be connected to this product.</p>
+              <p className="text-xs text-orange-700 mt-2">Your review will be connected to this product.</p>
             </div>
           )}
 
@@ -238,28 +239,48 @@ const NewExperience = ({ onClose, onSuccess, productName = '', initialCategoryNa
               onChange={handleChange}
               required
               className="w-full px-5 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition-all shadow-sm font-semibold"
-              placeholder={productName ? `Share your ${productName} experience title` : 'Brief title of your experience'}
+              placeholder={productName ? `Review title for ${productName}` : 'Brief title of your experience'}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-slate-900 mb-3">
-              Category *
-            </label>
-            <select
-              name="category_name"
-              value={formData.category_name}
-              onChange={handleChange}
-              required
-              className="w-full px-5 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition-all shadow-sm font-semibold"
-            >
-              <option value="">Select a category</option>
-              <option value="City">City</option>
-              <option value="Cinema">Cinema</option>
-              <option value="Theatre">Theatre</option>
-              <option value="Workshop">Workshop</option>
-            </select>
-          </div>
+          {productName && (
+            <div>
+              <label className="block text-sm font-bold text-slate-900 mb-3">
+                Purchase Date *
+              </label>
+              <input
+                type="date"
+                name="purchase_date"
+                value={formData.purchase_date}
+                onChange={handleChange}
+                required
+                className="w-full px-5 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition-all shadow-sm font-semibold"
+              />
+            </div>
+          )}
+
+          {!productName && (
+            <div>
+              <label className="block text-sm font-bold text-slate-900 mb-3">
+                Category *
+              </label>
+              <select
+                name="category_name"
+                value={formData.category_name}
+                onChange={handleChange}
+                required
+                className="w-full px-5 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition-all shadow-sm font-semibold"
+              >
+                <option value="">Select a category</option>
+                <option value="City">City</option>
+                <option value="Cinema">Cinema</option>
+                <option value="Theatre">Theatre</option>
+                <option value="Workshop">Workshop</option>
+                <option value="Cafe">Cafe</option>
+                <option value="Restaurant">Restaurant</option>
+              </select>
+            </div>
+          )}
 
           {!productName && (
             <div>
@@ -288,33 +309,35 @@ const NewExperience = ({ onClose, onSuccess, productName = '', initialCategoryNa
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-slate-900 mb-3">
-              🖼️ Experience Picture
-            </label>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="w-full px-5 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition-all shadow-sm"
-                />
-                <p className="text-xs text-slate-600 mt-2">Optional - JPG, PNG up to 5MB</p>
+          {!productName && (
+            <div>
+              <label className="block text-sm font-bold text-slate-900 mb-3">
+                🖼️ Experience Picture
+              </label>
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="w-full px-5 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition-all shadow-sm"
+                  />
+                  <p className="text-xs text-slate-600 mt-2">Optional - JPG, PNG up to 5MB</p>
+                </div>
+                {imagePreview && (
+                  <img 
+                    src={imagePreview} 
+                    alt="Preview" 
+                    className="w-20 h-20 rounded-lg object-cover border-2 border-blue-200"
+                  />
+                )}
               </div>
-              {imagePreview && (
-                <img 
-                  src={imagePreview} 
-                  alt="Preview" 
-                  className="w-20 h-20 rounded-lg object-cover border-2 border-blue-200"
-                />
-              )}
             </div>
-          </div>
+          )}
 
           <div>
             <label className="block text-sm font-bold text-slate-900 mb-3">
-              Your Experience *
+              {productName ? '🖊️ Your Review' : 'Your Experience'} *
             </label>
             <textarea
               name="content"
@@ -323,7 +346,7 @@ const NewExperience = ({ onClose, onSuccess, productName = '', initialCategoryNa
               required
               className="w-full px-5 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition-all shadow-sm font-semibold resize-none"
               rows={6}
-              placeholder="Share detailed thoughts about your experience, what you liked, what you didn't, recommendations, etc."
+              placeholder={productName ? 'Share your honest review. What did you like? What could be improved? How has it held up over time? Any recommendations?' : 'Share detailed thoughts about your experience, what you liked, what you didn\'t, recommendations, etc.'}
             />
           </div>
 
@@ -340,7 +363,7 @@ const NewExperience = ({ onClose, onSuccess, productName = '', initialCategoryNa
               disabled={loading}
               className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-bold hover:shadow-lg shadow-md transition-all disabled:opacity-50 disabled:cursor-wait transform hover:scale-105"
             >
-              {loading ? '⏳ Publishing...' : '✨ Publish Experience'}
+              {loading ? '⏳ Submitting...' : productName ? '📝 Submit Review' : '✨ Publish Experience'}
             </button>
           </div>
         </form>
