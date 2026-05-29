@@ -57,6 +57,52 @@ db.getConnection((err, connection) => {
     console.error("❌ DATABASE ERROR: ", err.message);
   } else {
     console.log("✅ DATABASE CONNECTED! Xplora system ready.");
+    
+    // Run migrations - check if banner_url and bio columns exist
+    const dbName = process.env.DB_NAME || 'xplora_db';
+    
+    // Check for banner_url column
+    connection.query(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME='users' AND COLUMN_NAME='banner_url'`,
+      [dbName],
+      (err, results) => {
+        if (!results || results.length === 0) {
+          connection.query(
+            "ALTER TABLE users ADD COLUMN banner_url LONGTEXT DEFAULT NULL",
+            (err) => {
+              if (err) {
+                console.error("❌ Migration error:", err.message);
+              } else {
+                console.log("✅ Added banner_url column to users table.");
+              }
+            }
+          );
+        }
+      }
+    );
+
+    // Check for bio column
+    connection.query(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME='users' AND COLUMN_NAME='bio'`,
+      [dbName],
+      (err, results) => {
+        if (!results || results.length === 0) {
+          connection.query(
+            "ALTER TABLE users ADD COLUMN bio TEXT DEFAULT NULL",
+            (err) => {
+              if (err) {
+                console.error("❌ Migration error:", err.message);
+              } else {
+                console.log("✅ Added bio column to users table.");
+              }
+            }
+          );
+        } else {
+          console.log("✅ Database schema is up to date.");
+        }
+      }
+    );
+    
     connection.release();
   }
 });
@@ -152,7 +198,7 @@ app.post('/api/auth/register', async (req, res) => {
     res.status(201).json({ 
       message: 'User registered successfully', 
       token,
-      user: { id: result.insertId, username: sanitizedUsername, email: sanitizedEmail, avatar_url: null }
+      user: { id: result.insertId, username: sanitizedUsername, email: sanitizedEmail, avatar_url: null, banner_url: null, bio: null, created_at: new Date() }
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -177,7 +223,7 @@ app.post('/api/auth/login', async (req, res) => {
     
     // Find user
     const [users] = await db.promise().query(
-      'SELECT id, username, email, password_hash, avatar_url FROM users WHERE email = ?',
+      'SELECT id, username, email, password_hash, avatar_url, banner_url, bio FROM users WHERE email = ?',
       [sanitizedEmail]
     );
     
@@ -202,7 +248,7 @@ app.post('/api/auth/login', async (req, res) => {
     res.json({ 
       message: 'Login successful', 
       token,
-      user: { id: user.id, username: user.username, email: user.email, avatar_url: user.avatar_url }
+      user: { id: user.id, username: user.username, email: user.email, avatar_url: user.avatar_url, banner_url: user.banner_url, bio: user.bio, created_at: user.created_at }
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -1103,6 +1149,42 @@ app.delete('/api/users/:id/follow', authenticateToken, async (req, res) => {
   }
 });
 
+// Get followers count for a user
+app.get('/api/users/:id/followers', async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    const [result] = await db.promise().query(
+      'SELECT COUNT(*) as count FROM user_follows WHERE following_id = ?',
+      [userId]
+    );
+    
+    const count = result[0]?.count || 0;
+    res.json({ count });
+  } catch (error) {
+    console.error("Get followers count error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get following count for a user
+app.get('/api/users/:id/following', async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    const [result] = await db.promise().query(
+      'SELECT COUNT(*) as count FROM user_follows WHERE follower_id = ?',
+      [userId]
+    );
+    
+    const count = result[0]?.count || 0;
+    res.json({ count });
+  } catch (error) {
+    console.error("Get following count error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Health check route
 app.get('/', (req, res) => {
   res.send("Xplora API Server Running 🚀");
@@ -1134,6 +1216,74 @@ app.post('/api/users/:id/avatar', authenticateToken, async (req, res) => {
     }
   } catch (error) {
     console.error("Avatar upload error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- PROFILE BANNER UPLOAD ---
+app.post('/api/users/:id/banner', authenticateToken, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { file } = req.body;
+
+    if (!file) {
+      return res.status(400).json({ error: 'No file provided' });
+    }
+
+    console.log(`Uploading banner for user ${userId}`);
+
+    // Update user banner_url in database
+    const [result] = await db.promise().query(
+      'UPDATE users SET banner_url = ? WHERE id = ?',
+      [file, userId]
+    );
+
+    console.log(`Update result: ${result.affectedRows} rows affected`);
+
+    if (result.affectedRows > 0) {
+      res.json({ 
+        message: 'Banner updated successfully',
+        banner_url: file 
+      });
+    } else {
+      res.status(404).json({ error: 'User not found' });
+    }
+  } catch (error) {
+    console.error("Banner upload error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- UPDATE USER BIO ---
+app.post('/api/users/:id/bio', authenticateToken, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { bio } = req.body;
+
+    if (!bio || typeof bio !== 'string') {
+      return res.status(400).json({ error: 'Bio must be a non-empty string' });
+    }
+
+    // Limit bio length to 500 characters
+    if (bio.length > 500) {
+      return res.status(400).json({ error: 'Bio must be less than 500 characters' });
+    }
+
+    const [result] = await db.promise().query(
+      'UPDATE users SET bio = ? WHERE id = ?',
+      [bio, userId]
+    );
+
+    if (result.affectedRows > 0) {
+      res.json({ 
+        message: 'Bio updated successfully',
+        bio: bio
+      });
+    } else {
+      res.status(404).json({ error: 'User not found' });
+    }
+  } catch (error) {
+    console.error("Bio update error:", error);
     res.status(500).json({ error: error.message });
   }
 });

@@ -43,6 +43,8 @@ CREATE TABLE users (
   email VARCHAR(255) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   avatar_url LONGTEXT DEFAULT NULL,
+  banner_url LONGTEXT DEFAULT NULL,
+  bio TEXT DEFAULT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_users_username (username),
