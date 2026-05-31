@@ -147,7 +147,7 @@ const ProductDetails = ({ productId, onClose }) => {
                           ))}
                         </div>
                       </div>
-                      <p className="text-xs text-slate-500 font-semibold mb-2">{new Date(experience.created_at).toLocaleDateString()} • ⏱️ Used for: <span className="text-green-700 font-bold">{calculateUsageDuration(experience.purchase_date)}</span></p>
+                      <p className="text-xs text-slate-500 font-semibold mb-2">{new Date(experience.created_at).toLocaleDateString()} • ⏱️ Used for: <span className="text-green-700 font-bold">{product.usage_duration}</span></p>
                       <p className="font-bold text-slate-900 text-base mb-3">{experience.title}</p>
                     </div>
                   </div>
