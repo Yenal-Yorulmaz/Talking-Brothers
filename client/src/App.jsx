@@ -7,6 +7,7 @@ import NewProduct from './NewProduct';
 import ProductsPage from './ProductsPage';
 import DashboardPage from './DashboardPage';
 import { useAuth } from './AuthContext';
+import API_BASE from './config';
 
 // --- BİLEŞENLER (COMPONENTS) ---
 
@@ -189,7 +190,7 @@ const ExperiencesPage = ({ refreshTrigger }) => {
   const experienceCategories = ['City', 'Cinema', 'Theatre', 'Workshop', 'Cafe', 'Restaurant'];
 
   const fetchExperiences = () => {
-    fetch('http://localhost:5000/api/experiences')
+    fetch(`${API_BASE}/experiences`)
       .then(res => res.json())
       .then(data => {
         // Filter to only include actual experiences (with valid experience categories)
@@ -319,7 +320,7 @@ const ProfilePage = ({ user, setUser, onLoginClick }) => {
         try {
           const base64String = reader.result;
 
-          const response = await fetch(`http://localhost:5000/api/users/${user.id}/avatar`, {
+          const response = await fetch(`${API_BASE}/users/${user.id}/avatar`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -382,7 +383,7 @@ const ProfilePage = ({ user, setUser, onLoginClick }) => {
         try {
           const base64String = reader.result;
 
-          const response = await fetch(`http://localhost:5000/api/users/${user.id}/banner`, {
+          const response = await fetch(`${API_BASE}/users/${user.id}/banner`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -429,7 +430,7 @@ const ProfilePage = ({ user, setUser, onLoginClick }) => {
 
     setSavingBio(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/users/${user.id}/bio`, {
+      const response = await fetch(`${API_BASE}/users/${user.id}/bio`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -488,7 +489,7 @@ const ProfilePage = ({ user, setUser, onLoginClick }) => {
       });
 
     // Fetch follower count
-    fetch(`http://localhost:5000/api/users/${user.id}/followers`)
+    fetch(`${API_BASE}/users/${user.id}/followers`)
       .then(res => res.json())
       .then(data => {
         setFollowers(data.count || 0);
@@ -499,7 +500,7 @@ const ProfilePage = ({ user, setUser, onLoginClick }) => {
       });
 
     // Fetch following count
-    fetch(`http://localhost:5000/api/users/${user.id}/following`)
+    fetch(`${API_BASE}/users/${user.id}/following`)
       .then(res => res.json())
       .then(data => {
         setFollowing(data.count || 0);

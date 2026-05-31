@@ -28,7 +28,7 @@ const ProductDetails = ({ productId, onClose }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchProductDetails = () => {
-    fetch(`http://localhost:5000/api/products/${productId}`)
+    fetch(`${API_BASE}/products/${productId}`)
       .then(res => res.json())
       .then(data => {
         setProductData(data);
@@ -247,7 +247,7 @@ const ProductsPage = ({ refreshTrigger, onAddExperience, user }) => {
   }, [refreshTrigger]);
 
   const fetchProducts = () => {
-    fetch('http://localhost:5000/api/products')
+    fetch(`${API_BASE}/products`)
       .then(res => res.json())
       .then(data => setProducts(data))
       .catch(err => console.error("Data loading error:", err));
