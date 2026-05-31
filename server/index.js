@@ -182,35 +182,40 @@ db.getConnection((err, connection) => {
         'Sports & Outdoors', 'Technology', 'Furniture', 'Gadgets', 'Food & Beverage'
       ];
       
-      // First check if categories table has any data
-      connection.query('SELECT COUNT(*) as count FROM categories', (err, result) => {
+      // Get all existing categories
+      connection.query('SELECT name FROM categories', (err, existingCategories) => {
         if (err) {
-          console.error('Error checking categories count:', err.message);
+          console.error('Error checking categories:', err.message);
           return;
         }
         
-        const categoryCount = result[0].count;
-        console.log(`📊 Categories in database: ${categoryCount}`);
+        const existingNames = new Set(existingCategories.map(c => c.name));
+        console.log(`📊 Existing categories in database: ${existingNames.size}`);
+        console.log(`📋 Existing categories:`, Array.from(existingNames));
         
-        // If no categories exist, seed them
-        if (categoryCount === 0) {
-          console.log('🌱 Seeding default categories...');
-          defaultCategories.forEach(category => {
-            connection.query(
-              'INSERT INTO categories (name) VALUES (?)',
-              [category],
-              (err) => {
-                if (err) {
-                  console.error(`❌ Error seeding category ${category}:`, err.message);
-                } else {
-                  console.log(`✅ Seeded category: ${category}`);
-                }
-              }
-            );
-          });
-        } else {
-          console.log('✅ Categories already exist, skipping seed');
+        // Find missing categories
+        const missingCategories = defaultCategories.filter(cat => !existingNames.has(cat));
+        
+        if (missingCategories.length === 0) {
+          console.log('✅ All 16 categories already exist');
+          console.log(`📊 Total categories available: ${existingNames.size}`);
+          return;
         }
+        
+        console.log(`🌱 Seeding ${missingCategories.length} missing categories...`);
+        missingCategories.forEach(category => {
+          connection.query(
+            'INSERT INTO categories (name) VALUES (?)',
+            [category],
+            (err) => {
+              if (err) {
+                console.error(`❌ Error seeding category "${category}":`, err.message);
+              } else {
+                console.log(`✅ Seeded category: "${category}"`);
+              }
+            }
+          );
+        });
       });
     };
     
