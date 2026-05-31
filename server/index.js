@@ -172,6 +172,26 @@ db.getConnection((err, connection) => {
     
     initSchema();
     
+    // Seed default categories if they don't exist
+    const seedCategories = () => {
+      const defaultCategories = ['City', 'Cinema', 'Theatre', 'Workshop', 'Cafe', 'Restaurant'];
+      
+      defaultCategories.forEach(category => {
+        connection.query(
+          'INSERT IGNORE INTO categories (name) VALUES (?)',
+          [category],
+          (err) => {
+            if (err) {
+              console.error(`Error seeding category ${category}:`, err.message);
+            }
+          }
+        );
+      });
+    };
+    
+    // Wait a moment for tables to be created, then seed categories
+    setTimeout(seedCategories, 500);
+    
     // Run migrations - check if banner_url and bio columns exist
     const dbName = process.env.DB_NAME || 'xplora_db';
     
