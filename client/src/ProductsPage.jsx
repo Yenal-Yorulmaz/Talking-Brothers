@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import API_BASE from './config';
 
 const calculateUsageDuration = (purchaseDate) => {
   const purchase = new Date(purchaseDate);

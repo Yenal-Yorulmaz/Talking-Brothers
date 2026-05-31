@@ -465,7 +465,7 @@ const ProfilePage = ({ user, setUser, onLoginClick }) => {
     if (!user) return;
     
     // Fetch all experiences and filter by user (exclude reviews which have product_id)
-    fetch('http://localhost:5000/api/experiences')
+    fetch(`${API_BASE}/experiences`)
       .then(res => res.json())
       .then(data => {
         const userExperiences = data.filter(exp => exp.user_id === user.id && !exp.product_id);
@@ -477,7 +477,7 @@ const ProfilePage = ({ user, setUser, onLoginClick }) => {
       });
 
     // Fetch all products and filter by user
-    fetch('http://localhost:5000/api/products')
+    fetch(`${API_BASE}/products`)
       .then(res => res.json())
       .then(data => {
         const userProducts = data.filter(prod => prod.user_id === user.id);
