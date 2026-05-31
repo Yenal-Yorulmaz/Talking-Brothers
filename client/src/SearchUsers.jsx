@@ -17,7 +17,7 @@ const SearchUsers = ({ user, token, onUserFollowed }) => {
     try {
       setIsLoading(true);
       console.log('Searching for:', term, 'with API_BASE:', API_BASE);
-      const response = await fetch(`${API_BASE}/api/users/search?q=${encodeURIComponent(term)}`, {
+      const response = await fetch(`${API_BASE}/users/search?q=${encodeURIComponent(term)}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -68,7 +68,7 @@ const SearchUsers = ({ user, token, onUserFollowed }) => {
     setSavingUserId(userId);
 
     try {
-      const res = await fetch(`${API_BASE}/api/users/${userId}/follow`, {
+      const res = await fetch(`${API_BASE}/users/${userId}/follow`, {
         method: isFollowed ? 'DELETE' : 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

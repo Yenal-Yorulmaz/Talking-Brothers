@@ -5,7 +5,7 @@ import FollowingList from './FollowingList';
 
 // Helper function to fetch categories
 const fetchCategoriesFromApi = async () => {
-  const response = await fetch(`${API_BASE}/api/categories`);
+  const response = await fetch(`${API_BASE}/categories`);
   if (!response.ok) throw new Error('Failed to fetch categories');
   return response.json();
 };
@@ -49,17 +49,17 @@ const DashboardPage = ({ user, onLoginClick, onOpenNotifications }) => {
 
       const [categoriesData, followedRes, updatesRes, unreadRes] = await Promise.all([
         fetchCategoriesFromApi(),
-        fetch(`${API_BASE}/api/categories/followed`, {
+        fetch(`${API_BASE}/categories/followed`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }),
-        fetch(`${API_BASE}/api/dashboard/followed-updates`, {
+        fetch(`${API_BASE}/dashboard/followed-updates`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }),
-        fetch(`${API_BASE}/api/notifications/unread/${user.id}`),
+        fetch(`${API_BASE}/notifications/unread/${user.id}`),
       ]);
 
       if (!followedRes.ok || !updatesRes.ok || !unreadRes.ok) {
@@ -106,7 +106,7 @@ const DashboardPage = ({ user, onLoginClick, onOpenNotifications }) => {
     setSavingCategoryId(categoryId);
 
     try {
-      const res = await fetch(`${API_BASE}/api/categories/${categoryId}/follow`, {
+      const res = await fetch(`${API_BASE}/categories/${categoryId}/follow`, {
         method: isFollowed ? 'DELETE' : 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -133,7 +133,7 @@ const DashboardPage = ({ user, onLoginClick, onOpenNotifications }) => {
       }
       setFollowedIds(nextFollowed);
 
-      const updatesRes = await fetch(`${API_BASE}/api/dashboard/followed-updates`, {
+      const updatesRes = await fetch(`${API_BASE}/dashboard/followed-updates`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

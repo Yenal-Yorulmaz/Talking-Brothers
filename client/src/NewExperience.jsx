@@ -145,7 +145,7 @@ const NewExperience = ({ onClose, onSuccess, productName = '', initialCategoryNa
         ...(productId && { product_id: productId })
       };
 
-      const response = await fetch(`${API_BASE}/api/experiences`, {
+      const response = await fetch(`${API_BASE}/experiences`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

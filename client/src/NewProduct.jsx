@@ -68,7 +68,7 @@ const NewProduct = ({ onClose, onSuccess }) => {
       console.log('JSON.stringify result:', JSON.stringify(productData));
       console.log('=== END DEBUG ===' );
 
-      const response = await fetch(`${API_BASE}/api/products`, {
+      const response = await fetch(`${API_BASE}/products`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

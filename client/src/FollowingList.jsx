@@ -17,7 +17,7 @@ const FollowingList = ({ user, token, refreshTrigger }) => {
   const loadFollowedUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/api/users/followed`, {
+      const response = await fetch(`${API_BASE}/users/followed`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -39,7 +39,7 @@ const FollowingList = ({ user, token, refreshTrigger }) => {
   const handleUnfollow = async (userId) => {
     setUnfollowingId(userId);
     try {
-      const response = await fetch(`${API_BASE}/api/users/${userId}/follow`, {
+      const response = await fetch(`${API_BASE}/users/${userId}/follow`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,

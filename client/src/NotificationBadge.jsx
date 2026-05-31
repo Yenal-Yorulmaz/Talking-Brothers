@@ -6,7 +6,7 @@ const NotificationBadge = ({ userId = 1 }) => {
 
   useEffect(() => {
     const fetchUnreadCount = () => {
-      fetch(`${API_BASE}/api/notifications/unread/${userId}`)
+      fetch(`${API_BASE}/notifications/unread/${userId}`)
         .then(res => res.json())
         .then(data => setUnreadCount(data.unread_count))
         .catch(err => console.error('Bildirim sayısı alınırken hata:', err));

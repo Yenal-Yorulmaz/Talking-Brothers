@@ -16,7 +16,7 @@ const NotificationsPanel = ({ onClose }) => {
 
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/api/notifications`, {
+      const res = await fetch(`${API_BASE}/notifications`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -41,7 +41,7 @@ const NotificationsPanel = ({ onClose }) => {
     if (!token) return;
 
     try {
-      const res = await fetch(`${API_BASE}/api/notifications/read-all`, {
+      const res = await fetch(`${API_BASE}/notifications/read-all`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
