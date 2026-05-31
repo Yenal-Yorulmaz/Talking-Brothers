@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import API_BASE from './config';
 
 const calculateUsageDuration = (purchaseDate) => {
+  if (!purchaseDate) return 'Not specified';
+  
   const purchase = new Date(purchaseDate);
+  if (isNaN(purchase.getTime())) return 'Not specified';
+  
   const today = new Date();
   
   const diffTime = Math.abs(today - purchase);
