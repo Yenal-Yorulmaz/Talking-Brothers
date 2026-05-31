@@ -176,21 +176,40 @@ db.getConnection((err, connection) => {
     const seedCategories = () => {
       const defaultCategories = ['City', 'Cinema', 'Theatre', 'Workshop', 'Cafe', 'Restaurant'];
       
-      defaultCategories.forEach(category => {
-        connection.query(
-          'INSERT IGNORE INTO categories (name) VALUES (?)',
-          [category],
-          (err) => {
-            if (err) {
-              console.error(`Error seeding category ${category}:`, err.message);
-            }
-          }
-        );
+      // First check if categories table has any data
+      connection.query('SELECT COUNT(*) as count FROM categories', (err, result) => {
+        if (err) {
+          console.error('Error checking categories count:', err.message);
+          return;
+        }
+        
+        const categoryCount = result[0].count;
+        console.log(`📊 Categories in database: ${categoryCount}`);
+        
+        // If no categories exist, seed them
+        if (categoryCount === 0) {
+          console.log('🌱 Seeding default categories...');
+          defaultCategories.forEach(category => {
+            connection.query(
+              'INSERT INTO categories (name) VALUES (?)',
+              [category],
+              (err) => {
+                if (err) {
+                  console.error(`❌ Error seeding category ${category}:`, err.message);
+                } else {
+                  console.log(`✅ Seeded category: ${category}`);
+                }
+              }
+            );
+          });
+        } else {
+          console.log('✅ Categories already exist, skipping seed');
+        }
       });
     };
     
-    // Wait a moment for tables to be created, then seed categories
-    setTimeout(seedCategories, 500);
+    // Wait for tables to be created, then seed categories
+    setTimeout(seedCategories, 1000);
     
     // Run migrations - check if banner_url and bio columns exist
     const dbName = process.env.DB_NAME || 'xplora_db';
