@@ -335,7 +335,7 @@ app.post('/api/auth/login', async (req, res) => {
     
     // Find user
     const [users] = await db.promise().query(
-      'SELECT id, username, email, password_hash, avatar_url, banner_url, bio FROM users WHERE email = ?',
+      'SELECT id, username, email, password_hash, avatar_url, banner_url, bio, created_at FROM users WHERE email = ?',
       [sanitizedEmail]
     );
     
