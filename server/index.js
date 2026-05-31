@@ -40,6 +40,12 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_here_change_th
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
 // --- DATABASE CONNECTION ---
+console.log("🔍 DATABASE CONFIG:");
+console.log("  DB_HOST:", process.env.DB_HOST || 'localhost');
+console.log("  DB_USER:", process.env.DB_USER || 'root');
+console.log("  DB_NAME:", process.env.DB_NAME || 'xplora_db');
+console.log("  DB_PORT:", process.env.DB_PORT || 3306);
+
 const db = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
