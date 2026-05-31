@@ -1,0 +1,57 @@
+# Environment Variables (DO NOT COMMIT)
+.env
+.env.local
+.env.*.local
+.env.*
+**/.env
+**/.env.*
+
+# Dependencies
+node_modules/
+**/node_modules/
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist/
+**/dist/
+build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+*.log
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+.DS_Store
+Thumbs.db
+
+# Database backups & dumps (excluding schema)
+*.sql.bak
+*.sql.backup
+*.dump
+database_backup/
+
+# OS specific
+.DS_Store
+Thumbs.db
+*.pem
+*.key
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+*.old
