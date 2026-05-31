@@ -58,6 +58,114 @@ db.getConnection((err, connection) => {
   } else {
     console.log("✅ DATABASE CONNECTED! Xplora system ready.");
     
+    // Initialize database schema if tables don't exist
+    const initSchema = () => {
+      const queries = [
+        `CREATE TABLE IF NOT EXISTS users (
+          id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+          username VARCHAR(50) NOT NULL UNIQUE,
+          email VARCHAR(255) NOT NULL UNIQUE,
+          password_hash VARCHAR(255) NOT NULL,
+          avatar_url LONGTEXT DEFAULT NULL,
+          banner_url LONGTEXT DEFAULT NULL,
+          bio TEXT DEFAULT NULL,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        
+        `CREATE TABLE IF NOT EXISTS categories (
+          id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+          name VARCHAR(100) NOT NULL UNIQUE,
+          icon VARCHAR(100) DEFAULT NULL,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        
+        `CREATE TABLE IF NOT EXISTS experiences (
+          id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+          user_id INT UNSIGNED NOT NULL,
+          category_id INT UNSIGNED NOT NULL,
+          title VARCHAR(255) NOT NULL,
+          content TEXT NOT NULL,
+          location VARCHAR(255) DEFAULT NULL,
+          rating TINYINT UNSIGNED NOT NULL DEFAULT 5,
+          experience_image LONGTEXT DEFAULT NULL,
+          product_id INT UNSIGNED DEFAULT NULL,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        
+        `CREATE TABLE IF NOT EXISTS products (
+          id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+          user_id INT UNSIGNED NOT NULL,
+          category_id INT UNSIGNED NOT NULL,
+          product_name VARCHAR(255) NOT NULL,
+          product_code VARCHAR(100) DEFAULT NULL,
+          purchase_date DATE DEFAULT NULL,
+          usage_duration VARCHAR(50) DEFAULT NULL,
+          pros TEXT DEFAULT NULL,
+          cons TEXT DEFAULT NULL,
+          content TEXT NOT NULL,
+          rating TINYINT UNSIGNED NOT NULL DEFAULT 5,
+          product_image LONGTEXT DEFAULT NULL,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        
+        `CREATE TABLE IF NOT EXISTS user_follows (
+          id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+          follower_id INT UNSIGNED NOT NULL,
+          following_id INT UNSIGNED NOT NULL,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          UNIQUE KEY (follower_id, following_id),
+          FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (following_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        
+        `CREATE TABLE IF NOT EXISTS category_follows (
+          id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+          user_id INT UNSIGNED NOT NULL,
+          category_id INT UNSIGNED NOT NULL,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          UNIQUE KEY (user_id, category_id),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        
+        `CREATE TABLE IF NOT EXISTS notifications (
+          id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+          user_id INT UNSIGNED NOT NULL,
+          sender_id INT UNSIGNED NOT NULL,
+          experience_id INT UNSIGNED DEFAULT NULL,
+          product_id INT UNSIGNED DEFAULT NULL,
+          message TEXT NOT NULL,
+          is_read BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+      ];
+      
+      queries.forEach((query, index) => {
+        connection.query(query, (err) => {
+          if (err && err.code !== 'ER_TABLE_EXISTS_ERROR') {
+            console.error(`❌ Schema init error (query ${index + 1}):`, err.message);
+          } else if (!err) {
+            console.log(`✅ Schema query ${index + 1} completed`);
+          }
+        });
+      });
+    };
+    
+    initSchema();
+    
     // Run migrations - check if banner_url and bio columns exist
     const dbName = process.env.DB_NAME || 'xplora_db';
     
@@ -70,10 +178,8 @@ db.getConnection((err, connection) => {
           connection.query(
             "ALTER TABLE users ADD COLUMN banner_url LONGTEXT DEFAULT NULL",
             (err) => {
-              if (err) {
+              if (err && err.code !== 'ER_DUP_FIELDNAME') {
                 console.error("❌ Migration error:", err.message);
-              } else {
-                console.log("✅ Added banner_url column to users table.");
               }
             }
           );
@@ -90,10 +196,10 @@ db.getConnection((err, connection) => {
           connection.query(
             "ALTER TABLE users ADD COLUMN bio TEXT DEFAULT NULL",
             (err) => {
-              if (err) {
+              if (err && err.code !== 'ER_DUP_FIELDNAME') {
                 console.error("❌ Migration error:", err.message);
               } else {
-                console.log("✅ Added bio column to users table.");
+                console.log("✅ Database schema is up to date.");
               }
             }
           );
