@@ -174,7 +174,13 @@ db.getConnection((err, connection) => {
     
     // Seed default categories if they don't exist
     const seedCategories = () => {
-      const defaultCategories = ['City', 'Cinema', 'Theatre', 'Workshop', 'Cafe', 'Restaurant'];
+      const defaultCategories = [
+        // Experience categories
+        'City', 'Cinema', 'Theatre', 'Workshop', 'Cafe', 'Restaurant',
+        // Product categories
+        'Electronics', 'Books', 'Clothing', 'Beauty & Personal Care', 'Home & Garden',
+        'Sports & Outdoors', 'Technology', 'Furniture', 'Gadgets', 'Food & Beverage'
+      ];
       
       // First check if categories table has any data
       connection.query('SELECT COUNT(*) as count FROM categories', (err, result) => {
